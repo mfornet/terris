@@ -1,5 +1,7 @@
 # terris
 
+[![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris)
+
 A small, friendly Git worktree manager for everyday use.
 
 ## What it does
