@@ -1,6 +1,6 @@
 # terris
 
-[![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris) [![CI](https://github.com/mfornet/terris/actions/workflows/ci.yml/badge.svg)](https://github.com/mfornet/terris/actions/workflows/ci.yml) [![License](https://img.shields.io/crates/l/terris.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris) [![Docs.rs](https://img.shields.io/docsrs/terris.svg)](https://docs.rs/terris) [![CI](https://github.com/mfornet/terris/actions/workflows/ci.yml/badge.svg)](https://github.com/mfornet/terris/actions/workflows/ci.yml) [![License](https://img.shields.io/crates/l/terris.svg)](LICENSE)
 
 
 A small, friendly Git worktree manager for everyday use.

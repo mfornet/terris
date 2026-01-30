@@ -60,7 +60,12 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::List => cmd_list(),
-        Commands::Create { name, path, branch, from } => cmd_create(&name, path, branch, from),
+        Commands::Create {
+            name,
+            path,
+            branch,
+            from,
+        } => cmd_create(&name, path, branch, from),
         Commands::Delete { target, force } => cmd_delete(&target, force),
         Commands::Path { target } => cmd_path(&target),
     }
@@ -73,7 +78,12 @@ fn cmd_list() -> Result<()> {
     Ok(())
 }
 
-fn cmd_create(name: &str, path: Option<PathBuf>, branch: Option<String>, from: Option<String>) -> Result<()> {
+fn cmd_create(
+    name: &str,
+    path: Option<PathBuf>,
+    branch: Option<String>,
+    from: Option<String>,
+) -> Result<()> {
     let root = git_root()?;
     let cwd = std::env::current_dir().context("read current directory")?;
     let repo_name = root
@@ -87,17 +97,17 @@ fn cmd_create(name: &str, path: Option<PathBuf>, branch: Option<String>, from: O
         Some(p) => resolve_path(&cwd, p),
         None => default_worktree_path(&repo_name, &branch)?,
     };
-    if is_default_path {
-        if let Some(parent) = target_path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("create worktree base directory '{}'", parent.display())
-            })?;
-        }
+    if is_default_path && let Some(parent) = target_path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("create worktree base directory '{}'", parent.display()))?;
     }
 
     let branch_exists = git_branch_exists(&root, &branch)?;
     if branch_exists && from.is_some() {
-        bail!("branch '{}' already exists; --from is only for new branches", branch);
+        bail!(
+            "branch '{}' already exists; --from is only for new branches",
+            branch
+        );
     }
 
     let mut args: Vec<String> = vec!["worktree".into(), "add".into()];
@@ -232,11 +242,23 @@ fn print_worktrees(worktrees: &[Worktree]) {
     let name_width = rows.iter().map(|r| r.0.len()).max().unwrap_or(4).max(4);
     let branch_width = rows.iter().map(|r| r.1.len()).max().unwrap_or(6).max(6);
 
-    println!("{:name_width$} {:branch_width$} {} {}", "NAME", "BRANCH", "PATH", "FLAGS",
-        name_width = name_width, branch_width = branch_width);
+    println!(
+        "{:name_width$} {:branch_width$} PATH FLAGS",
+        "NAME",
+        "BRANCH",
+        name_width = name_width,
+        branch_width = branch_width
+    );
     for (name, branch, path, flags) in rows {
-        println!("{:name_width$} {:branch_width$} {} {}", name, branch, path, flags,
-            name_width = name_width, branch_width = branch_width);
+        println!(
+            "{:name_width$} {:branch_width$} {} {}",
+            name,
+            branch,
+            path,
+            flags,
+            name_width = name_width,
+            branch_width = branch_width
+        );
     }
 }
 
@@ -252,7 +274,9 @@ fn worktree_name(wt: &Worktree) -> String {
 }
 
 fn worktree_branch_short(wt: &Worktree) -> Option<&str> {
-    wt.branch.as_deref().map(|b| b.strip_prefix("refs/heads/").unwrap_or(b))
+    wt.branch
+        .as_deref()
+        .map(|b| b.strip_prefix("refs/heads/").unwrap_or(b))
 }
 
 fn worktree_flags(wt: &Worktree) -> String {
@@ -286,7 +310,10 @@ fn resolve_worktree<'a>(target: &str, worktrees: &'a [Worktree]) -> Result<&'a W
         bail!("no worktree matches '{}'", target);
     }
     if matches.len() > 1 {
-        let names: Vec<String> = matches.iter().map(|w| w.path.display().to_string()).collect();
+        let names: Vec<String> = matches
+            .iter()
+            .map(|w| w.path.display().to_string())
+            .collect();
         bail!("'{}' is ambiguous: {}", target, names.join(", "));
     }
     Ok(matches[0])
@@ -454,8 +481,14 @@ prunable stale
         let _ = std::fs::create_dir_all(&wt2_path);
 
         let worktrees = vec![
-            wt(wt1_path.to_string_lossy().as_ref(), Some("refs/heads/alpha")),
-            wt(wt2_path.to_string_lossy().as_ref(), Some("refs/heads/alpha")),
+            wt(
+                wt1_path.to_string_lossy().as_ref(),
+                Some("refs/heads/alpha"),
+            ),
+            wt(
+                wt2_path.to_string_lossy().as_ref(),
+                Some("refs/heads/alpha"),
+            ),
         ];
 
         let by_path = resolve_worktree(wt1_path.to_string_lossy().as_ref(), &worktrees).unwrap();

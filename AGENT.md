@@ -24,6 +24,8 @@ Build/run
 - Build: `cargo build`
 - Run: `cargo run -- <subcommand>`
 - No tests yet.
+- After every code update, run `cargo fmt` and `cargo clippy`.
+- After changes, run relevant tests.
 
 Potential future improvements
 - `terris prune` wrapper.
