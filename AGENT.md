@@ -6,18 +6,17 @@ Project intent
 - Uses the `git worktree` subcommands directly; no custom git plumbing.
 
 Command summary
-- `terris list`
-- `terris create <name> [--path <path>] [--branch <branch>] [--from <ref>]`
-- `terris delete <name-or-path> [--force]`
-- `terris path <name-or-path>`
+- `terris <branch>`
+- `terris --list`
+- `terris --delete <branch>`
 
 Key implementation details
 - Parsing uses `git worktree list --porcelain` to avoid brittle parsing.
 - Branch detection: `refs/heads/<name>` is checked via `git rev-parse --verify --quiet`.
-- Create behavior: if branch exists, `git worktree add <path> <branch>`;
-  otherwise `git worktree add -b <branch> <path> [<from>]`.
+- Ensure behavior: if branch exists, `git worktree add <path> <branch>`;
+  otherwise `git worktree add -b <branch> <path>` from current HEAD.
 - Default path is computed from registry: `~/.terris-worktrees/<repo-name>/<branch>-<8-random-lowercase-letters>`.
-- Worktree matching resolution order: exact path, basename, branch short-name.
+- Worktree matching is by branch short-name only.
 - Errors are surfaced with `anyhow` and clear messages.
 
 Build/run

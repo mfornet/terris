@@ -6,10 +6,10 @@
 A small, friendly Git worktree manager for everyday use.
 
 ## What it does
-- Create new worktrees quickly
+- Create new worktrees quickly (or jump to existing ones)
 - List existing worktrees
 - Remove worktrees safely
-- Print a worktree path for `cd $(terris path <name>)`
+- Print a worktree path for `cd "$(terris <branch>)"`
 - Simplify workflows with autonomous agents that work in the terminal in the same repository
 
 ## Install
@@ -30,37 +30,30 @@ cargo install --path . --force
 
 ## Usage
 ```bash
-terris list
-terris create <name>
-terris create <name> --branch <branch> --from <ref>
-terris create <name> --path /tmp/my-wt
-terris delete <name-or-path>
-terris delete <name-or-path> --force
-terris path <name-or-path>
+terris <branch>
+terris --list
+terris --delete <branch>
 ```
 
-## How create works
-- Default branch is `<name>`.
+## How it works
+- `terris <branch>` creates the worktree if missing and prints the path every time.
 - If the branch exists, it is used directly.
-- If the branch does not exist, it is created (optionally from `--from`).
+- If the branch does not exist, it is created from the current HEAD.
 - Default path is `~/.terris-worktrees/<repo-name>/<branch>-<8-random-lowercase-letters>`.
 
 ## Examples
 ```bash
-# Create a worktree (branch "feature-a") next to the repo root
-terris create feature-a
-
-# Create from main at a custom path
-terris create feature-b --from main --path ../project-feature-b
+# Create or open a worktree (branch "feature-a")
+terris feature-a
 
 # List worktrees
-terris list
+terris --list
 
 # Jump to a worktree
-cd "$(terris path feature-a)"
+cd "$(terris feature-a)"
 
 # Delete a worktree
-terris delete feature-a
+terris --delete feature-a
 ```
 
 ## Notes

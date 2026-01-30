@@ -3,47 +3,21 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser};
 use rand::Rng;
 
 #[derive(Parser)]
 #[command(name = "terris", version, about = "Git worktree manager")]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
     /// List worktrees for the current repository
-    List,
-    /// Create a new worktree
-    Create {
-        /// Name of the worktree (also default branch name)
-        name: String,
-        /// Optional path for the worktree
-        #[arg(long)]
-        path: Option<PathBuf>,
-        /// Branch name to use/create (defaults to <name>)
-        #[arg(long)]
-        branch: Option<String>,
-        /// Start point when creating a new branch
-        #[arg(long)]
-        from: Option<String>,
-    },
-    /// Remove a worktree
-    Delete {
-        /// Worktree name or path
-        target: String,
-        /// Force removal if the worktree has changes
-        #[arg(long)]
-        force: bool,
-    },
-    /// Print the path to a worktree
-    Path {
-        /// Worktree name or path
-        target: String,
-    },
+    #[arg(long, conflicts_with_all = ["delete", "branch"])]
+    list: bool,
+    /// Remove a worktree by branch name
+    #[arg(long, value_name = "branch", conflicts_with_all = ["list", "branch"])]
+    delete: Option<String>,
+    /// Branch name to open (create if missing)
+    #[arg(value_name = "branch", conflicts_with_all = ["list", "delete"])]
+    branch: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -58,17 +32,18 @@ struct Worktree {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    match cli.command {
-        Commands::List => cmd_list(),
-        Commands::Create {
-            name,
-            path,
-            branch,
-            from,
-        } => cmd_create(&name, path, branch, from),
-        Commands::Delete { target, force } => cmd_delete(&target, force),
-        Commands::Path { target } => cmd_path(&target),
+    if cli.list {
+        return cmd_list();
     }
+    if let Some(branch) = cli.delete {
+        return cmd_delete_branch(&branch);
+    }
+    if let Some(branch) = cli.branch {
+        return cmd_ensure_branch(&branch);
+    }
+    Cli::command().print_help().context("print help")?;
+    println!();
+    Ok(())
 }
 
 fn cmd_list() -> Result<()> {
@@ -78,74 +53,51 @@ fn cmd_list() -> Result<()> {
     Ok(())
 }
 
-fn cmd_create(
-    name: &str,
-    path: Option<PathBuf>,
-    branch: Option<String>,
-    from: Option<String>,
-) -> Result<()> {
+fn cmd_ensure_branch(branch: &str) -> Result<()> {
     let root = git_root()?;
-    let cwd = std::env::current_dir().context("read current directory")?;
+    let worktrees = list_worktrees(&root)?;
+    if let Some(wt) = find_worktree_by_branch(branch, &worktrees)? {
+        println!("{}", wt.path.display());
+        return Ok(());
+    }
+
     let repo_name = root
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("repo")
         .to_string();
-    let branch = branch.unwrap_or_else(|| name.to_string());
-    let is_default_path = path.is_none();
-    let target_path = match path {
-        Some(p) => resolve_path(&cwd, p),
-        None => default_worktree_path(&repo_name, &branch)?,
-    };
-    if is_default_path && let Some(parent) = target_path.parent() {
+    let target_path = default_worktree_path(&repo_name, branch)?;
+    if let Some(parent) = target_path.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("create worktree base directory '{}'", parent.display()))?;
     }
 
-    let branch_exists = git_branch_exists(&root, &branch)?;
-    if branch_exists && from.is_some() {
-        bail!(
-            "branch '{}' already exists; --from is only for new branches",
-            branch
-        );
-    }
+    let branch_exists = git_branch_exists(&root, branch)?;
 
     let mut args: Vec<String> = vec!["worktree".into(), "add".into()];
     if !branch_exists {
         args.push("-b".into());
-        args.push(branch.clone());
+        args.push(branch.to_string());
     }
     args.push(target_path.to_string_lossy().to_string());
     if branch_exists {
-        args.push(branch.clone());
-    } else if let Some(start) = from {
-        args.push(start);
+        args.push(branch.to_string());
     }
 
-    run_git(&args, &root).with_context(|| format!("create worktree '{}'", name))?;
+    run_git(&args, &root).with_context(|| format!("create worktree '{}'", branch))?;
     println!("{}", target_path.display());
     Ok(())
 }
 
-fn cmd_delete(target: &str, force: bool) -> Result<()> {
+fn cmd_delete_branch(branch: &str) -> Result<()> {
     let root = git_root()?;
     let worktrees = list_worktrees(&root)?;
-    let wt = resolve_worktree(target, &worktrees)?;
+    let wt = find_worktree_by_branch(branch, &worktrees)?
+        .with_context(|| format!("no worktree matches branch '{}'", branch))?;
 
     let mut args: Vec<String> = vec!["worktree".into(), "remove".into()];
-    if force {
-        args.push("--force".into());
-    }
     args.push(wt.path.to_string_lossy().to_string());
-    run_git(&args, &root).with_context(|| format!("remove worktree '{}'", target))?;
-    Ok(())
-}
-
-fn cmd_path(target: &str) -> Result<()> {
-    let root = git_root()?;
-    let worktrees = list_worktrees(&root)?;
-    let wt = resolve_worktree(target, &worktrees)?;
-    println!("{}", wt.path.display());
+    run_git(&args, &root).with_context(|| format!("remove worktree '{}'", branch))?;
     Ok(())
 }
 
@@ -297,65 +249,25 @@ fn worktree_flags(wt: &Worktree) -> String {
     }
 }
 
-fn resolve_worktree<'a>(target: &str, worktrees: &'a [Worktree]) -> Result<&'a Worktree> {
-    let cwd = std::env::current_dir().context("read current directory")?;
-    let mut matches = match_by_path(target, worktrees, &cwd);
+fn find_worktree_by_branch<'a>(
+    branch: &str,
+    worktrees: &'a [Worktree],
+) -> Result<Option<&'a Worktree>> {
+    let matches: Vec<&Worktree> = worktrees
+        .iter()
+        .filter(|w| worktree_branch_short(w) == Some(branch))
+        .collect();
     if matches.is_empty() {
-        matches = match_by_basename(target, worktrees);
-    }
-    if matches.is_empty() {
-        matches = match_by_branch(target, worktrees);
-    }
-    if matches.is_empty() {
-        bail!("no worktree matches '{}'", target);
+        return Ok(None);
     }
     if matches.len() > 1 {
         let names: Vec<String> = matches
             .iter()
             .map(|w| w.path.display().to_string())
             .collect();
-        bail!("'{}' is ambiguous: {}", target, names.join(", "));
+        bail!("branch '{}' is ambiguous: {}", branch, names.join(", "));
     }
-    Ok(matches[0])
-}
-
-fn match_by_path<'a>(target: &str, worktrees: &'a [Worktree], cwd: &Path) -> Vec<&'a Worktree> {
-    let path_like = Path::new(target).is_absolute() || target.contains(std::path::MAIN_SEPARATOR);
-    if !path_like {
-        return Vec::new();
-    }
-    let target_path = resolve_path(cwd, PathBuf::from(target));
-    let target_norm = normalize_path(&target_path);
-    worktrees
-        .iter()
-        .filter(|w| normalize_path(&w.path) == target_norm)
-        .collect()
-}
-
-fn match_by_basename<'a>(target: &str, worktrees: &'a [Worktree]) -> Vec<&'a Worktree> {
-    worktrees
-        .iter()
-        .filter(|w| w.path.file_name().and_then(OsStr::to_str) == Some(target))
-        .collect()
-}
-
-fn match_by_branch<'a>(target: &str, worktrees: &'a [Worktree]) -> Vec<&'a Worktree> {
-    worktrees
-        .iter()
-        .filter(|w| worktree_branch_short(w) == Some(target))
-        .collect()
-}
-
-fn normalize_path(path: &Path) -> PathBuf {
-    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
-}
-
-fn resolve_path(base: &Path, path: PathBuf) -> PathBuf {
-    if path.is_absolute() {
-        path
-    } else {
-        base.join(path)
-    }
+    Ok(Some(matches[0]))
 }
 
 fn default_worktree_path(repo_name: &str, branch: &str) -> Result<PathBuf> {
@@ -472,33 +384,17 @@ prunable stale
     }
 
     #[test]
-    fn resolve_worktree_matches_and_errors() {
-        let temp_root = std::env::temp_dir().join("terris-tests-resolve");
-        let _ = std::fs::create_dir_all(&temp_root);
-        let wt1_path = temp_root.join("one");
-        let wt2_path = temp_root.join("two");
-        let _ = std::fs::create_dir_all(&wt1_path);
-        let _ = std::fs::create_dir_all(&wt2_path);
-
+    fn find_worktree_by_branch_matches_and_errors() {
         let worktrees = vec![
-            wt(
-                wt1_path.to_string_lossy().as_ref(),
-                Some("refs/heads/alpha"),
-            ),
-            wt(
-                wt2_path.to_string_lossy().as_ref(),
-                Some("refs/heads/alpha"),
-            ),
+            wt("/repo/one", Some("refs/heads/alpha")),
+            wt("/repo/two", Some("refs/heads/alpha")),
         ];
 
-        let by_path = resolve_worktree(wt1_path.to_string_lossy().as_ref(), &worktrees).unwrap();
-        assert_eq!(by_path.path, wt1_path);
-
-        let err = resolve_worktree("alpha", &worktrees).unwrap_err();
+        let err = find_worktree_by_branch("alpha", &worktrees).unwrap_err();
         assert!(format!("{err}").contains("ambiguous"));
 
-        let err = resolve_worktree("missing", &worktrees).unwrap_err();
-        assert!(format!("{err}").contains("no worktree matches"));
+        let missing = find_worktree_by_branch("missing", &worktrees).unwrap();
+        assert!(missing.is_none());
     }
 
     #[test]
@@ -518,17 +414,13 @@ prunable stale
     }
 
     #[test]
-    fn match_by_basename_and_branch() {
+    fn find_worktree_by_branch_matches() {
         let worktrees = vec![
             wt("/repo/alpha", Some("refs/heads/main")),
             wt("/repo/beta", Some("refs/heads/feature")),
         ];
-        let by_base = match_by_basename("beta", &worktrees);
-        assert_eq!(by_base.len(), 1);
-        assert_eq!(by_base[0].path, PathBuf::from("/repo/beta"));
 
-        let by_branch = match_by_branch("main", &worktrees);
-        assert_eq!(by_branch.len(), 1);
-        assert_eq!(by_branch[0].path, PathBuf::from("/repo/alpha"));
+        let by_branch = find_worktree_by_branch("main", &worktrees).unwrap();
+        assert_eq!(by_branch.unwrap().path, PathBuf::from("/repo/alpha"));
     }
 }
