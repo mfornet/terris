@@ -154,16 +154,13 @@ fn cmd_ensure_branch(branch: &str) -> Result<()> {
     }
 
     let branch_exists = git_branch_exists(&root, branch)?;
+    if !branch_exists {
+        bail!("branch '{}' does not exist", branch);
+    }
 
     let mut args: Vec<String> = vec!["worktree".into(), "add".into()];
-    if !branch_exists {
-        args.push("-b".into());
-        args.push(branch.to_string());
-    }
     args.push(target_path.to_string_lossy().to_string());
-    if branch_exists {
-        args.push(branch.to_string());
-    }
+    args.push(branch.to_string());
 
     run_git(&args, &root).with_context(|| format!("create worktree '{}'", branch))?;
     println!("{}", target_path.display());

@@ -28,7 +28,7 @@ cargo install --path .
 ## Usage
 
 ```bash
-# Jump to a worktree. Create branch and worktree if missing.
+# Jump to a worktree. Branch must exist.
 cd "$(terris feature-a)"
 
 # List worktrees
@@ -80,9 +80,9 @@ terris --completions fish > ~/.config/fish/completions/terris.fish
 ```
 
 ## How it works
-- `terris <branch>` creates the worktree if missing and prints the path every time.
+- `terris <branch>` creates the worktree (branch must exist) and prints the path every time.
 - If the branch exists, it is used directly.
-- If the branch does not exist, it is created from the current HEAD.
+- If the branch does not exist, the command fails with an error.
 - Default path is `~/.terris-worktrees/<repo-name>/<branch>-<random-key>`.
 
 ## Notes
