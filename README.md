@@ -1,4 +1,4 @@
-# woody
+# terris
 
 A small, friendly Git worktree manager for everyday use.
 
@@ -6,7 +6,7 @@ A small, friendly Git worktree manager for everyday use.
 - Create new worktrees quickly
 - List existing worktrees
 - Remove worktrees safely
-- Print a worktree path for `cd $(wood path <name>)`
+- Print a worktree path for `cd $(terris path <name>)`
 
 ## Install
 From source:
@@ -21,37 +21,37 @@ cargo install --path . --force
 
 ## Usage
 ```bash
-woody list
-woody create <name>
-woody create <name> --branch <branch> --from <ref>
-woody create <name> --path /tmp/my-wt
-woody delete <name-or-path>
-woody delete <name-or-path> --force
-woody path <name-or-path>
+terris list
+terris create <name>
+terris create <name> --branch <branch> --from <ref>
+terris create <name> --path /tmp/my-wt
+terris delete <name-or-path>
+terris delete <name-or-path> --force
+terris path <name-or-path>
 ```
 
 ## How create works
 - Default branch is `<name>`.
 - If the branch exists, it is used directly.
 - If the branch does not exist, it is created (optionally from `--from`).
-- Default path is `~/.wood-worktrees/<repo-name>/<branch>-<8-random-lowercase-letters>`.
+- Default path is `~/.terris-worktrees/<repo-name>/<branch>-<8-random-lowercase-letters>`.
 
 ## Examples
 ```bash
 # Create a worktree (branch "feature-a") next to the repo root
-woody create feature-a
+terris create feature-a
 
 # Create from main at a custom path
-woody create feature-b --from main --path ../project-feature-b
+terris create feature-b --from main --path ../project-feature-b
 
 # List worktrees
-woody list
+terris list
 
 # Jump to a worktree
-cd "$(woody path feature-a)"
+cd "$(terris path feature-a)"
 
 # Delete a worktree
-woody delete feature-a
+terris delete feature-a
 ```
 
 ## Notes

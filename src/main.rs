@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use rand::Rng;
 
 #[derive(Parser)]
-#[command(name = "woody", version, about = "Git worktree manager")]
+#[command(name = "terris", version, about = "Git worktree manager")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -339,7 +339,7 @@ fn default_worktree_path(repo_name: &str, branch: &str) -> Result<PathBuf> {
 
 fn registry_base_dir() -> Result<PathBuf> {
     let home = std::env::var_os("HOME").context("HOME is not set")?;
-    Ok(PathBuf::from(home).join(".wood-worktrees"))
+    Ok(PathBuf::from(home).join(".terris-worktrees"))
 }
 
 fn random_suffix(len: usize) -> String {
