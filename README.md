@@ -1,6 +1,6 @@
 # terris
 
-[![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris)
+[![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris) [![License](https://img.shields.io/crates/l/terris.svg)](LICENSE)
 
 A small, friendly Git worktree manager for everyday use.
 
