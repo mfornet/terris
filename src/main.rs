@@ -351,3 +351,151 @@ fn random_suffix(len: usize) -> String {
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct EnvGuard {
+        key: &'static str,
+        prior: Option<std::ffi::OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &Path) -> Self {
+            let prior = std::env::var_os(key);
+            unsafe {
+                std::env::set_var(key, value);
+            }
+            Self { key, prior }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.prior {
+                Some(value) => unsafe {
+                    std::env::set_var(self.key, value);
+                },
+                None => unsafe {
+                    std::env::remove_var(self.key);
+                },
+            }
+        }
+    }
+
+    fn wt(path: &str, branch: Option<&str>) -> Worktree {
+        Worktree {
+            path: PathBuf::from(path),
+            branch: branch.map(|b| b.to_string()),
+            ..Worktree::default()
+        }
+    }
+
+    #[test]
+    fn parse_worktrees_parses_porcelain() {
+        let input = "\
+worktree /repo
+HEAD 111111
+branch refs/heads/main
+
+worktree /repo/feature
+HEAD 222222
+detached
+locked
+prunable stale
+";
+        let worktrees = parse_worktrees(input);
+        assert_eq!(worktrees.len(), 2);
+        assert_eq!(worktrees[0].path, PathBuf::from("/repo"));
+        assert_eq!(worktrees[0].head.as_deref(), Some("111111"));
+        assert_eq!(worktrees[0].branch.as_deref(), Some("refs/heads/main"));
+        assert!(!worktrees[0].detached);
+        assert!(!worktrees[0].locked);
+        assert!(worktrees[0].prunable.is_none());
+
+        assert_eq!(worktrees[1].path, PathBuf::from("/repo/feature"));
+        assert_eq!(worktrees[1].head.as_deref(), Some("222222"));
+        assert!(worktrees[1].branch.is_none());
+        assert!(worktrees[1].detached);
+        assert!(worktrees[1].locked);
+        assert_eq!(worktrees[1].prunable.as_deref(), Some("stale"));
+    }
+
+    #[test]
+    fn worktree_display_helpers() {
+        let mut wt = Worktree {
+            path: PathBuf::from("/repo/feature"),
+            branch: Some("refs/heads/feature".into()),
+            detached: true,
+            locked: true,
+            prunable: Some("gone".into()),
+            ..Worktree::default()
+        };
+        assert_eq!(worktree_branch_short(&wt), Some("feature"));
+        assert_eq!(worktree_name(&wt), "feature");
+        assert_eq!(worktree_flags(&wt), "detached,locked,prunable");
+
+        wt.branch = None;
+        assert_eq!(worktree_name(&wt), "feature");
+        wt.detached = false;
+        wt.locked = false;
+        wt.prunable = None;
+        assert_eq!(worktree_flags(&wt), "-");
+    }
+
+    #[test]
+    fn resolve_worktree_matches_and_errors() {
+        let temp_root = std::env::temp_dir().join("terris-tests-resolve");
+        let _ = std::fs::create_dir_all(&temp_root);
+        let wt1_path = temp_root.join("one");
+        let wt2_path = temp_root.join("two");
+        let _ = std::fs::create_dir_all(&wt1_path);
+        let _ = std::fs::create_dir_all(&wt2_path);
+
+        let worktrees = vec![
+            wt(wt1_path.to_string_lossy().as_ref(), Some("refs/heads/alpha")),
+            wt(wt2_path.to_string_lossy().as_ref(), Some("refs/heads/alpha")),
+        ];
+
+        let by_path = resolve_worktree(wt1_path.to_string_lossy().as_ref(), &worktrees).unwrap();
+        assert_eq!(by_path.path, wt1_path);
+
+        let err = resolve_worktree("alpha", &worktrees).unwrap_err();
+        assert!(format!("{err}").contains("ambiguous"));
+
+        let err = resolve_worktree("missing", &worktrees).unwrap_err();
+        assert!(format!("{err}").contains("no worktree matches"));
+    }
+
+    #[test]
+    fn default_worktree_path_uses_home_registry_and_suffix() {
+        let temp_home = std::env::temp_dir().join("terris-tests-home");
+        let _ = std::fs::create_dir_all(&temp_home);
+        let _guard = EnvGuard::set("HOME", &temp_home);
+
+        let path = default_worktree_path("repo", "branch").unwrap();
+        let base = temp_home.join(".terris-worktrees").join("repo");
+        assert!(path.starts_with(&base));
+
+        let file_name = path.file_name().and_then(OsStr::to_str).unwrap();
+        let suffix = file_name.strip_prefix("branch-").unwrap();
+        assert_eq!(suffix.len(), 8);
+        assert!(suffix.chars().all(|c| c.is_ascii_lowercase()));
+    }
+
+    #[test]
+    fn match_by_basename_and_branch() {
+        let worktrees = vec![
+            wt("/repo/alpha", Some("refs/heads/main")),
+            wt("/repo/beta", Some("refs/heads/feature")),
+        ];
+        let by_base = match_by_basename("beta", &worktrees);
+        assert_eq!(by_base.len(), 1);
+        assert_eq!(by_base[0].path, PathBuf::from("/repo/beta"));
+
+        let by_branch = match_by_branch("main", &worktrees);
+        assert_eq!(by_branch.len(), 1);
+        assert_eq!(by_branch[0].path, PathBuf::from("/repo/alpha"));
+    }
+}

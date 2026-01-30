@@ -1,6 +1,7 @@
 # terris
 
 [![Crates.io](https://img.shields.io/crates/v/terris.svg)](https://crates.io/crates/terris)
+[![CI](https://github.com/mfornet/terris/actions/workflows/ci.yml/badge.svg)](https://github.com/mfornet/terris/actions/workflows/ci.yml)
 
 A small, friendly Git worktree manager for everyday use.
 
