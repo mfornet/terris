@@ -2,6 +2,13 @@
 name = "terris"
 version = "0.1.0"
 edition = "2024"
+description = "A simple git worktree manager."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/mfornet/terris"
+homepage = "https://github.com/mfornet/terris"
+keywords = ["git", "worktree", "cli", "developer-tools", "workflow"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1.0"

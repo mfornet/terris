@@ -7,8 +7,14 @@ A small, friendly Git worktree manager for everyday use.
 - List existing worktrees
 - Remove worktrees safely
 - Print a worktree path for `cd $(terris path <name>)`
+- Simplify workflows with autonomous agents that work in the terminal in the same repository
 
 ## Install
+From crates.io (once published):
+```bash
+cargo install terris
+```
+
 From source:
 ```bash
 cargo install --path .
@@ -57,3 +63,9 @@ terris delete feature-a
 ## Notes
 - Works from any directory inside a git repo.
 - The tool shells out to `git`, so `git` must be installed and available in `PATH`.
+
+## Name
+The project is named after the [Terris people](https://coppermind.net/wiki/Terris), responsible for preserving the knowledge of the civilization.
+
+## License
+MIT
