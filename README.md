@@ -1,4 +1,4 @@
-# wood
+# woody
 
 A small, friendly Git worktree manager for everyday use.
 
@@ -11,18 +11,23 @@ A small, friendly Git worktree manager for everyday use.
 ## Install
 From source:
 ```bash
-cargo build --release
+cargo install --path .
+```
+
+Update:
+```bash
+cargo install --path . --force
 ```
 
 ## Usage
 ```bash
-wood list
-wood create <name>
-wood create <name> --branch <branch> --from <ref>
-wood create <name> --path /tmp/my-wt
-wood delete <name-or-path>
-wood delete <name-or-path> --force
-wood path <name-or-path>
+woody list
+woody create <name>
+woody create <name> --branch <branch> --from <ref>
+woody create <name> --path /tmp/my-wt
+woody delete <name-or-path>
+woody delete <name-or-path> --force
+woody path <name-or-path>
 ```
 
 ## How create works
@@ -34,19 +39,19 @@ wood path <name-or-path>
 ## Examples
 ```bash
 # Create a worktree (branch "feature-a") next to the repo root
-wood create feature-a
+woody create feature-a
 
 # Create from main at a custom path
-wood create feature-b --from main --path ../project-feature-b
+woody create feature-b --from main --path ../project-feature-b
 
 # List worktrees
-wood list
+woody list
 
 # Jump to a worktree
-cd "$(wood path feature-a)"
+cd "$(woody path feature-a)"
 
 # Delete a worktree
-wood delete feature-a
+woody delete feature-a
 ```
 
 ## Notes

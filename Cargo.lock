@@ -253,7 +253,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "wood"
+name = "woody"
 version = "0.1.0"
 dependencies = [
  "anyhow",

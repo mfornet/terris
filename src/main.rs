@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use rand::Rng;
 
 #[derive(Parser)]
-#[command(name = "wood", version, about = "Git worktree manager")]
+#[command(name = "woody", version, about = "Git worktree manager")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

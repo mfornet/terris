@@ -1,15 +1,15 @@
 Handoff notes for future work
 
 Project intent
-- `wood` is a git worktree manager CLI built in Rust.
+- `woody` is a git worktree manager CLI built in Rust.
 - Operates from any directory inside a git repo; resolves the repo root via `git`.
 - Uses the `git worktree` subcommands directly; no custom git plumbing.
 
 Command summary
-- `wood list`
-- `wood create <name> [--path <path>] [--branch <branch>] [--from <ref>]`
-- `wood delete <name-or-path> [--force]`
-- `wood path <name-or-path>`
+- `woody list`
+- `woody create <name> [--path <path>] [--branch <branch>] [--from <ref>]`
+- `woody delete <name-or-path> [--force]`
+- `woody path <name-or-path>`
 
 Key implementation details
 - Parsing uses `git worktree list --porcelain` to avoid brittle parsing.
