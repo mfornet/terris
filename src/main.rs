@@ -3,12 +3,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, ValueEnum};
 use rand::Rng;
 
 #[derive(Parser)]
 #[command(name = "terris", version, about = "Git worktree manager")]
 struct Cli {
+    /// Print shell completion script (bash or zsh)
+    #[arg(long, value_enum, conflicts_with_all = ["list", "delete", "branch"])]
+    completions: Option<CompletionShell>,
     /// List worktrees for the current repository
     #[arg(long, conflicts_with_all = ["delete", "branch"])]
     list: bool,
@@ -18,6 +21,13 @@ struct Cli {
     /// Branch name to open (create if missing)
     #[arg(value_name = "branch", conflicts_with_all = ["list", "delete"])]
     branch: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
 }
 
 #[derive(Debug, Default)]
@@ -32,6 +42,10 @@ struct Worktree {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    if let Some(shell) = cli.completions {
+        print_completions(shell);
+        return Ok(());
+    }
     if cli.list {
         return cmd_list();
     }
@@ -44,6 +58,73 @@ fn main() -> Result<()> {
     Cli::command().print_help().context("print help")?;
     println!();
     Ok(())
+}
+
+fn print_completions(shell: CompletionShell) {
+    match shell {
+        CompletionShell::Bash => {
+            println!(
+                r#"_terris_branches() {{
+  git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null
+}}
+
+_terris_complete() {{
+  local cur prev
+  cur="${{COMP_WORDS[COMP_CWORD]}}"
+  prev="${{COMP_WORDS[COMP_CWORD-1]}}"
+
+  if [[ "$cur" == -* ]]; then
+    COMPREPLY=($(compgen -W "--list --delete" -- "$cur"))
+    return 0
+  fi
+
+  if [[ $COMP_CWORD -eq 1 || "$prev" == "--delete" ]]; then
+    COMPREPLY=($(compgen -W "$(_terris_branches)" -- "$cur"))
+    return 0
+  fi
+
+  COMPREPLY=()
+}}
+
+complete -F _terris_complete terris
+"#
+            );
+        }
+        CompletionShell::Zsh => {
+            println!(
+                r#"#compdef terris
+
+_terris_branches() {{
+  git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null
+}}
+
+_arguments -s \
+  '--list[List worktrees]' \
+  '--delete[Remove a worktree by branch name]:branch:->branches' \
+  '1:branch:->branches' \
+  '*: :->args'
+
+case $state in
+  branches)
+    _values 'branches' $(_terris_branches)
+    ;;
+esac
+"#
+            );
+        }
+        CompletionShell::Fish => {
+            println!(
+                r#"function __terris_branches
+  command git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null
+end
+
+complete -c terris -l list -d 'List worktrees'
+complete -c terris -l delete -d 'Remove a worktree by branch name' -a "(__terris_branches)"
+complete -c terris -f -a "(__terris_branches)"
+"#
+            );
+        }
+    }
 }
 
 fn cmd_list() -> Result<()> {

@@ -38,6 +38,47 @@ terris --list
 terris --delete feature-a
 ```
 
+## Shell completion
+
+Generate a completion script and source it in your shell:
+
+```bash
+# Bash
+terris --completions bash > /tmp/terris.bash
+source /tmp/terris.bash
+
+# Zsh
+terris --completions zsh > /tmp/_terris
+fpath=(/tmp $fpath)
+autoload -U compinit && compinit
+
+# Fish
+terris --completions fish > /tmp/terris.fish
+source /tmp/terris.fish
+```
+
+Install permanently (recommended):
+
+```bash
+# Bash (user-level)
+mkdir -p ~/.local/share/bash-completion/completions
+terris --completions bash > ~/.local/share/bash-completion/completions/terris
+
+# Bash (system-wide)
+sudo mkdir -p /etc/bash_completion.d
+sudo terris --completions bash > /etc/bash_completion.d/terris
+
+# Zsh
+mkdir -p ~/.zsh/completions
+terris --completions zsh > ~/.zsh/completions/_terris
+fpath=(~/.zsh/completions $fpath)
+autoload -U compinit && compinit
+
+# Fish
+mkdir -p ~/.config/fish/completions
+terris --completions fish > ~/.config/fish/completions/terris.fish
+```
+
 ## How it works
 - `terris <branch>` creates the worktree if missing and prints the path every time.
 - If the branch exists, it is used directly.
