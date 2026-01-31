@@ -34,9 +34,25 @@ cd "$(terris feature-a)"
 # List worktrees
 terris
 
+# List all worktrees (including detached)
+terris --all
+
 # Delete a worktree
 terris --rm feature-a
 ```
+
+
+## How it works
+- `terris <branch>` creates the worktree (branch must exist) and prints the path every time.
+- `terris` lists worktrees for the current repository.
+- `terris --all` lists all worktrees, including ones without branches.
+- If the branch exists, it is used directly.
+- If the branch does not exist, the command fails with an error.
+- Default path is `~/.terris-worktrees/<repo-name>/<branch>-<random-key>`.
+
+## Notes
+- Works from any directory inside a git repo.
+- The tool shells out to `git`, so `git` must be installed and available in `PATH`.
 
 ## Shell completion
 
@@ -78,17 +94,6 @@ autoload -U compinit && compinit
 mkdir -p ~/.config/fish/completions
 terris --completions fish > ~/.config/fish/completions/terris.fish
 ```
-
-## How it works
-- `terris <branch>` creates the worktree (branch must exist) and prints the path every time.
-- `terris` lists worktrees for the current repository.
-- If the branch exists, it is used directly.
-- If the branch does not exist, the command fails with an error.
-- Default path is `~/.terris-worktrees/<repo-name>/<branch>-<random-key>`.
-
-## Notes
-- Works from any directory inside a git repo.
-- The tool shells out to `git`, so `git` must be installed and available in `PATH`.
 
 ## Name
 The project is named after the [Terris people](https://coppermind.net/wiki/Terris), responsible for preserving the knowledge of the civilization.

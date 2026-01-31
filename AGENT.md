@@ -8,6 +8,7 @@ Project intent
 Command summary
 - `terris <branch>`
 - `terris`
+- `terris --all`
 - `terris --rm <branch>`
 
 Key implementation details

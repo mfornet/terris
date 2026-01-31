@@ -10,13 +10,16 @@ use rand::Rng;
 #[command(name = "terris", version, about = "Git worktree manager")]
 struct Cli {
     /// Print shell completion script (bash or zsh)
-    #[arg(long, value_enum, conflicts_with_all = ["rm", "branch"])]
+    #[arg(long, value_enum, conflicts_with_all = ["all", "rm", "branch"])]
     completions: Option<CompletionShell>,
+    /// List all worktrees, including those without branches
+    #[arg(long, conflicts_with_all = ["rm", "branch"])]
+    all: bool,
     /// Remove a worktree by branch name
     #[arg(long = "rm", value_name = "branch", conflicts_with_all = ["branch"])]
     rm: Option<String>,
     /// Branch name to open (create if missing)
-    #[arg(value_name = "branch", conflicts_with_all = ["rm"])]
+    #[arg(value_name = "branch", conflicts_with_all = ["all", "rm"])]
     branch: Option<String>,
 }
 
@@ -49,7 +52,7 @@ fn main() -> Result<()> {
     if let Some(branch) = cli.branch {
         return cmd_ensure_branch(&branch);
     }
-    cmd_list()
+    cmd_list(cli.all)
 }
 
 fn print_completions(shell: CompletionShell) {
@@ -66,7 +69,7 @@ _terris_complete() {{
   prev="${{COMP_WORDS[COMP_CWORD-1]}}"
 
   if [[ "$cur" == -* ]]; then
-    COMPREPLY=($(compgen -W "--rm" -- "$cur"))
+    COMPREPLY=($(compgen -W "--all --rm" -- "$cur"))
     return 0
   fi
 
@@ -91,6 +94,7 @@ _terris_branches() {{
 }}
 
 _arguments -s \
+  '--all[List all worktrees, including those without branches]' \
   '--rm[Remove a worktree by branch name]:branch:->branches' \
   '1:branch:->branches' \
   '*: :->args'
@@ -109,6 +113,7 @@ esac
   command git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null
 end
 
+complete -c terris -l all -d 'List all worktrees, including those without branches'
 complete -c terris -l rm -d 'Remove a worktree by branch name' -a "(__terris_branches)"
 complete -c terris -f -a "(__terris_branches)"
 "#
@@ -117,10 +122,24 @@ complete -c terris -f -a "(__terris_branches)"
     }
 }
 
-fn cmd_list() -> Result<()> {
+fn cmd_list(show_all: bool) -> Result<()> {
     let root = git_root()?;
     let worktrees = list_worktrees(&root)?;
-    print_worktrees(&worktrees);
+    if show_all {
+        print_worktrees(&worktrees);
+        return Ok(());
+    }
+
+    let (with_branch, without_branch): (Vec<Worktree>, Vec<Worktree>) = worktrees
+        .into_iter()
+        .partition(|wt| worktree_branch_short(wt).is_some());
+    print_worktrees(&with_branch);
+    if !without_branch.is_empty() {
+        println!(
+            "# {} worktree(s) without a branch not shown. Use --all to display.",
+            without_branch.len()
+        );
+    }
     Ok(())
 }
 
