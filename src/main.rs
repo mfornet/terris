@@ -3,23 +3,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result, bail};
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{Parser, ValueEnum};
 use rand::Rng;
 
 #[derive(Parser)]
 #[command(name = "terris", version, about = "Git worktree manager")]
 struct Cli {
     /// Print shell completion script (bash or zsh)
-    #[arg(long, value_enum, conflicts_with_all = ["list", "delete", "branch"])]
+    #[arg(long, value_enum, conflicts_with_all = ["rm", "branch"])]
     completions: Option<CompletionShell>,
-    /// List worktrees for the current repository
-    #[arg(long, conflicts_with_all = ["delete", "branch"])]
-    list: bool,
     /// Remove a worktree by branch name
-    #[arg(long, value_name = "branch", conflicts_with_all = ["list", "branch"])]
-    delete: Option<String>,
+    #[arg(long = "rm", value_name = "branch", conflicts_with_all = ["branch"])]
+    rm: Option<String>,
     /// Branch name to open (create if missing)
-    #[arg(value_name = "branch", conflicts_with_all = ["list", "delete"])]
+    #[arg(value_name = "branch", conflicts_with_all = ["rm"])]
     branch: Option<String>,
 }
 
@@ -46,18 +43,13 @@ fn main() -> Result<()> {
         print_completions(shell);
         return Ok(());
     }
-    if cli.list {
-        return cmd_list();
-    }
-    if let Some(branch) = cli.delete {
+    if let Some(branch) = cli.rm {
         return cmd_delete_branch(&branch);
     }
     if let Some(branch) = cli.branch {
         return cmd_ensure_branch(&branch);
     }
-    Cli::command().print_help().context("print help")?;
-    println!();
-    Ok(())
+    cmd_list()
 }
 
 fn print_completions(shell: CompletionShell) {
@@ -74,11 +66,11 @@ _terris_complete() {{
   prev="${{COMP_WORDS[COMP_CWORD-1]}}"
 
   if [[ "$cur" == -* ]]; then
-    COMPREPLY=($(compgen -W "--list --delete" -- "$cur"))
+    COMPREPLY=($(compgen -W "--rm" -- "$cur"))
     return 0
   fi
 
-  if [[ $COMP_CWORD -eq 1 || "$prev" == "--delete" ]]; then
+  if [[ $COMP_CWORD -eq 1 || "$prev" == "--rm" ]]; then
     COMPREPLY=($(compgen -W "$(_terris_branches)" -- "$cur"))
     return 0
   fi
@@ -99,8 +91,7 @@ _terris_branches() {{
 }}
 
 _arguments -s \
-  '--list[List worktrees]' \
-  '--delete[Remove a worktree by branch name]:branch:->branches' \
+  '--rm[Remove a worktree by branch name]:branch:->branches' \
   '1:branch:->branches' \
   '*: :->args'
 
@@ -118,8 +109,7 @@ esac
   command git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null
 end
 
-complete -c terris -l list -d 'List worktrees'
-complete -c terris -l delete -d 'Remove a worktree by branch name' -a "(__terris_branches)"
+complete -c terris -l rm -d 'Remove a worktree by branch name' -a "(__terris_branches)"
 complete -c terris -f -a "(__terris_branches)"
 "#
             );

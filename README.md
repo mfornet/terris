@@ -32,10 +32,10 @@ cargo install --path .
 cd "$(terris feature-a)"
 
 # List worktrees
-terris --list
+terris
 
 # Delete a worktree
-terris --delete feature-a
+terris --rm feature-a
 ```
 
 ## Shell completion
@@ -81,6 +81,7 @@ terris --completions fish > ~/.config/fish/completions/terris.fish
 
 ## How it works
 - `terris <branch>` creates the worktree (branch must exist) and prints the path every time.
+- `terris` lists worktrees for the current repository.
 - If the branch exists, it is used directly.
 - If the branch does not exist, the command fails with an error.
 - Default path is `~/.terris-worktrees/<repo-name>/<branch>-<random-key>`.

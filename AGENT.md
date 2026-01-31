@@ -7,8 +7,8 @@ Project intent
 
 Command summary
 - `terris <branch>`
-- `terris --list`
-- `terris --delete <branch>`
+- `terris`
+- `terris --rm <branch>`
 
 Key implementation details
 - Parsing uses `git worktree list --porcelain` to avoid brittle parsing.
@@ -22,12 +22,4 @@ Key implementation details
 Build/run
 - Build: `cargo build`
 - Run: `cargo run -- <subcommand>`
-- No tests yet.
-- After every code update, run `cargo fmt` and `cargo clippy`.
-- After changes, run relevant tests.
-
-Potential future improvements
-- `terris prune` wrapper.
-- JSON output for list.
-- Configurable default worktree base directory.
-- Completion scripts for bash/zsh/fish.
+- After every code update, run `cargo check`, `cargo clippy`, and `cargo test`, and fix all errors found there.
