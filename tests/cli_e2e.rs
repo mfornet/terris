@@ -1,6 +1,4 @@
 use std::process::Command;
-
-use assert_cmd::cargo::cargo_bin;
 use tempfile::TempDir;
 
 fn run_git(args: &[&str], cwd: &std::path::Path) {
@@ -32,7 +30,14 @@ fn worktree_create_stdout_is_single_line() {
 
     std::fs::write(repo_dir.join("README.md"), "test\n").expect("write file");
     run_git_with_env(
-        &["-c", "user.name=Test", "-c", "user.email=test@example.com", "add", "."],
+        &[
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            "add",
+            ".",
+        ],
         &repo_dir,
         &[],
     );
@@ -55,7 +60,7 @@ fn worktree_create_stdout_is_single_line() {
     let home_dir = temp_dir.path().join("home");
     std::fs::create_dir_all(&home_dir).expect("create home dir");
 
-    let bin = cargo_bin!("terris");
+    let bin = assert_cmd::cargo::cargo_bin!("terris");
     let output = Command::new(bin)
         .arg("feature")
         .current_dir(&repo_dir)

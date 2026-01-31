@@ -1,6 +1,6 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, ValueEnum};
@@ -171,7 +171,8 @@ fn cmd_ensure_branch(branch: &str) -> Result<()> {
     args.push(target_path.to_string_lossy().to_string());
     args.push(branch.to_string());
 
-    run_git(&args, &root).with_context(|| format!("create worktree '{}'", branch))?;
+    run_git_silence_stdout(&args, &root)
+        .with_context(|| format!("create worktree '{}'", branch))?;
     println!("{}", target_path.display());
     Ok(())
 }
@@ -184,7 +185,8 @@ fn cmd_delete_branch(branch: &str) -> Result<()> {
 
     let mut args: Vec<String> = vec!["worktree".into(), "remove".into()];
     args.push(wt.path.to_string_lossy().to_string());
-    run_git(&args, &root).with_context(|| format!("remove worktree '{}'", branch))?;
+    run_git_silence_stdout(&args, &root)
+        .with_context(|| format!("remove worktree '{}'", branch))?;
     Ok(())
 }
 
@@ -203,6 +205,8 @@ fn git_branch_exists(root: &Path, branch: &str) -> Result<bool> {
         .arg("--quiet")
         .arg(ref_name)
         .current_dir(root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .status()
         .context("check branch existence")?;
     Ok(status.success())
@@ -266,6 +270,28 @@ where
         bail!("{}", stderr.trim());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn run_git_silence_stdout<I, S>(args: I, cwd: &Path) -> Result<()>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let args_vec: Vec<String> = args
+        .into_iter()
+        .map(|arg| arg.as_ref().to_string_lossy().to_string())
+        .collect();
+    let output = Command::new("git")
+        .args(&args_vec)
+        .current_dir(cwd)
+        .stdout(Stdio::null())
+        .output()
+        .with_context(|| format!("run git {}", args_vec.join(" ")))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("{}", stderr.trim());
+    }
+    Ok(())
 }
 
 fn print_worktrees(worktrees: &[Worktree]) {
