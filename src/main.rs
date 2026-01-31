@@ -167,7 +167,7 @@ fn cmd_ensure_branch(branch: &str) -> Result<()> {
         bail!("branch '{}' does not exist", branch);
     }
 
-    let mut args: Vec<String> = vec!["worktree".into(), "add".into()];
+    let mut args: Vec<String> = vec!["worktree".into(), "add".into(), "--quiet".into()];
     args.push(target_path.to_string_lossy().to_string());
     args.push(branch.to_string());
 
@@ -369,10 +369,10 @@ fn registry_base_dir() -> Result<PathBuf> {
 }
 
 fn random_suffix(len: usize) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut out = String::with_capacity(len);
     for _ in 0..len {
-        let c = rng.gen_range(b'a'..=b'z') as char;
+        let c = rng.random_range(b'a'..=b'z') as char;
         out.push(c);
     }
     out
