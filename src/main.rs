@@ -256,15 +256,15 @@ fn merge_toml_values(dst: &mut toml::Value, src: toml::Value) {
 
 /// Expand a leading `~/` or lone `~` using the `HOME` env var.
 fn expand_tilde(path: &str) -> PathBuf {
-    if let Some(rest) = path.strip_prefix("~/") {
-        if let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home).join(rest);
-        }
+    if let Some(rest) = path.strip_prefix("~/")
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home).join(rest);
     }
-    if path == "~" {
-        if let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home);
-        }
+    if path == "~"
+        && let Some(home) = std::env::var_os("HOME")
+    {
+        return PathBuf::from(home);
     }
     PathBuf::from(path)
 }
@@ -386,7 +386,10 @@ fn cmd_ensure_branch(branch: &str, config: &Config) -> Result<()> {
     }
 
     if fetch_attempted {
-        bail!("branch '{}' does not exist locally and was not found on the remote", branch);
+        bail!(
+            "branch '{}' does not exist locally and was not found on the remote",
+            branch
+        );
     }
     bail!(
         "branch '{}' does not exist locally. Hint: add `on_missing_branch = \"fetch, create\"` to your terris config",
@@ -470,7 +473,14 @@ fn create_worktree_from_remote(root: &Path, branch: &str, path: &Path) -> Result
     let remote_ref = format!("origin/{}", branch);
     run_git_silence_stdout(
         [
-            "worktree", "add", "--quiet", "--track", "-b", branch, &path_str, &remote_ref,
+            "worktree",
+            "add",
+            "--quiet",
+            "--track",
+            "-b",
+            branch,
+            &path_str,
+            &remote_ref,
         ],
         root,
     )
@@ -993,27 +1003,23 @@ prunable stale
 
     #[test]
     fn missing_branch_strategy_rejects_invalid_combinations() {
-        let with_error =
-            toml::from_str::<BehaviorConfig>("on_missing_branch = \"error, fetch\"");
+        let with_error = toml::from_str::<BehaviorConfig>("on_missing_branch = \"error, fetch\"");
         assert!(with_error.is_err());
 
         let with_duplicate =
             toml::from_str::<BehaviorConfig>("on_missing_branch = \"fetch, fetch\"");
         assert!(with_duplicate.is_err());
 
-        let with_empty =
-            toml::from_str::<BehaviorConfig>("on_missing_branch = \"fetch, \"");
+        let with_empty = toml::from_str::<BehaviorConfig>("on_missing_branch = \"fetch, \"");
         assert!(with_empty.is_err());
 
-        let result =
-            toml::from_str::<BehaviorConfig>("on_missing_branch = \"teleport\"");
+        let result = toml::from_str::<BehaviorConfig>("on_missing_branch = \"teleport\"");
         assert!(result.is_err());
     }
 
     #[test]
     fn merge_toml_values_layers_global_and_local() {
-        let mut merged: toml::Value =
-            toml::from_str("[display]\nshow_head = true\n").unwrap();
+        let mut merged: toml::Value = toml::from_str("[display]\nshow_head = true\n").unwrap();
         let local: toml::Value = toml::from_str(
             "[worktrees]\nuse_random_suffix = false\n[display]\nshow_head = false\n",
         )
@@ -1049,8 +1055,9 @@ prunable stale
             },
             ..Config::default()
         };
-        let err =
-            default_worktree_path("repo", "branch", &config).unwrap_err().to_string();
+        let err = default_worktree_path("repo", "branch", &config)
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("worktrees.suffix_length"));
     }
 }
