@@ -4,7 +4,7 @@ use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, ValueEnum};
-use rand::Rng;
+use rand::RngExt;
 use serde::Deserialize;
 
 // ---------------------------------------------------------------------------
